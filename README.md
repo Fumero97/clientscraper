@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Coherence AI | Client Scraper
 
-## Getting Started
+A premium Next.js application designed to monitor and manage the consistency (coherence) between client web pages and official company product offerings. Powered by AI agents to automate scraping, transcription, and discrepancy detection.
 
-First, run the development server:
+![Dashboard Preview](https://via.placeholder.com/800x450?text=Dashboard+Preview)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Insights Dashboard**: High-level overview of compliance across all monitored pages.
+- **Automated Web Scraping**: Uses Playwright to capture text content from client URLs.
+- **AI-Powered Analysis**: Leverages OpenAI to compare live web content against the official product catalog.
+- **Airtable Integration**: Full two-way sync with Airtable as the primary database.
+- **Smart Product Loader**: Automatically extract product details from websites or brochures using AI.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Vanilla CSS (Premium Dark Theme)
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **Automation**: Playwright
+- **AI**: OpenAI API
+- **Database**: Airtable API
 
-## Learn More
+## 🏁 Getting Started
 
-To learn more about Next.js, take a look at the following resources:
+### Prerequisites
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Node.js 18+
+- Airtable Account (with Personal Access Token)
+- OpenAI API Key
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Installation
 
-## Deploy on Vercel
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/clientscraper.git
+   cd clientscraper
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Configure Environment Variables:
+   Create a `.env.local` file in the root directory and add the following:
+   ```env
+   # Airtable
+   AIRTABLE_API_KEY=your_token
+   AIRTABLE_BASE_ID=your_base_id
+
+   # OpenAI
+   OPENAI_API_KEY=your_key
+   ```
+   Refer to `.env.example` for the full list of variables.
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000](http://localhost:3000) to see the application.
+
+## 📄 License
+
+MIT
