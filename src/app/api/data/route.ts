@@ -36,7 +36,7 @@ export async function GET() {
       severity: record.get('Severity Level'),
       client: record.get('Client Name'),
       product: record.get('Product/Service Name'),
-      date: record.get('Date') || record.createdTime,
+      date: record.get('Date') || (record as any)._rawJson?.createdTime || new Date().toISOString(),
       resolved: record.get('Resolved'),
       screenshot: record.get('Screenshot'),
     }));
