@@ -13,7 +13,7 @@ export async function GET() {
       id: record.id,
       client: record.get('Client Name'),
       url: record.get('Web Page URL'),
-      status: record.get('Stato Revisione'),
+      status: record.get('Coerenza Offerta vs Pagina (AI)') || 'Da verificare',
       discrepancies: record.get('# Discrepancies') || 0,
       lastChecked: record.get('Last Checked Date'),
       screenshot: record.get('Screenshot'),
@@ -23,7 +23,7 @@ export async function GET() {
     const products = productsRecords.map(record => ({
       id: record.id,
       name: record.get('Product or Service Name'),
-      description: record.get('Description'),
+      description: record.get('Reference Page'), // Using Reference Page as description fallback if needed
       price: record.get('Price'),
       active: record.get('Active'),
       coherence: record.get('Coerenza Web vs Offerta Aziendale (AI)'),
@@ -34,9 +34,9 @@ export async function GET() {
       name: record.get('Name'),
       description: record.get('Discrepancy Description'),
       severity: record.get('Severity Level'),
-      client: record.get('Client Name'),
-      product: record.get('Product/Service Name'),
-      date: record.get('Date') || (record as any)._rawJson?.createdTime || new Date().toISOString(),
+      client: record.get('Client Name (Lookup)'),
+      product: record.get('Product/Service Name (Lookup)'),
+      date: (record as any)._rawJson?.createdTime || new Date().toISOString(),
       resolved: record.get('Resolved'),
       screenshot: record.get('Screenshot'),
     }));

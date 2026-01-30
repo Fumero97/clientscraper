@@ -9,8 +9,8 @@ const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(
 );
 
 export const tables = {
-  pages: base('Pages'),
-  products: base('Products Reference'),
+  pages: base('Client Web Pages'),
+  products: base('Products/Services'),
   discrepancies: base('Discrepancy Notes'),
 };
 

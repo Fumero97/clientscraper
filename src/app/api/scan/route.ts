@@ -3,9 +3,6 @@ import { scrapeWebPage } from '@/lib/agents/scraper';
 import { analyzeDiscrepancies } from '@/lib/agents/analyzer';
 import { tables } from '@/lib/airtable';
 
-// Cloudinary is deactivated as per user request
-// import { uploadScreenshot } from '@/lib/cloudinary';
-
 export async function POST(request: Request) {
   const { pageId } = await request.json();
   
@@ -20,40 +17,31 @@ export async function POST(request: Request) {
     const productsRecords = await tables.products.select().all();
     const products = productsRecords.map(r => ({
       name: r.get('Product or Service Name') as string,
-      description: r.get('Description') as string,
+      description: r.get('Product or Service Name') as string, // Using name as description fallback
       price: r.get('Price') as string,
     }));
 
     // 3. Scrape
     const scraped = await scrapeWebPage(url);
     
-    // 4. Cloudinary upload skipped (User request)
-    const imageUrl = ''; 
-
-    // 5. Analyze with real OpenAI
+    // 4. Analyze with real OpenAI
     const newDiscrepancies = await analyzeDiscrepancies(scraped.text, products);
     
-    // 6. Update Airtable Page record
+    // 5. Update Airtable Page record
     const pageUpdates: any = {
       'Trascrizione Testo': scraped.text,
       'Last Checked Date': scraped.timestamp,
-      'Stato Revisione': 'Verificata'
     };
     
-    // Skip screenshot attachment since Cloudinary is disabled
-    // if (imageUrl) {
-    //   pageUpdates['Screenshot'] = [{ url: imageUrl }];
-    // }
-
     await tables.pages.update(pageId, pageUpdates);
     
-    // 7. Add new discrepancies to Airtable
+    // 6. Add new discrepancies to Airtable
     for (const d of newDiscrepancies) {
       const discData: any = {
         'Name': d.name,
         'Discrepancy Description': d.description,
         'Severity Level': d.severity,
-        'Client Name': [pageId],
+        'Client Web Page': [pageId], // Linked field
         'Resolved': false
       };
 

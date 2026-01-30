@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     for (const p of extracted) {
       await tables.products.create({
         'Product or Service Name': p.name,
-        'Description': p.description,
         'Price': p.price,
         'Active': true
       });
