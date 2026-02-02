@@ -51,7 +51,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Scrape and Extract if not cached
+    // --- STEP 3: FETCH PREVIOUS RESOLUTIONS (MEMORY) ---
+    const previousDiscrepancies = await tables.discrepancies.select({
+      filterByFormula: `AND({Client Web Page} = '${pageId}', OR({Resolved} = 1, NOT({Resolution Notes} = '')))`
+    }).all();
+    
+    const previousResolutions = previousDiscrepancies
+      .map(d => ({
+        description: d.get('Discrepancy Description') as string,
+        resolution: d.get('Resolution Notes') as string
+      }))
+      .filter(d => d.resolution);
+
+    // 4. Scrape and Extract if not cached
     const clientScraped = await scrapeWebPage(clientUrl);
     
     if (!officialFacts) {
@@ -67,18 +79,19 @@ export async function POST(request: Request) {
           });
           console.log('✅ Official facts saved to Airtable cache.');
         } catch (e) {
-          console.warn('Could not save to Airtable cache (Field "Official Data Cache" might be missing).');
+          console.warn('Could not save to Airtable cache.');
         }
       }
     }
 
-    // 4. Analyze with Comparison Agent
-    console.log('🤖 Running AI comparison against official fact sheet...');
+    // 5. Analyze with Comparison Agent (passing memory)
+    console.log('🤖 Running AI comparison with memory...');
     const analysis = await analyzeDiscrepancies(
       clientUrl,
       clientScraped.text,
       officialUrl,
-      officialFacts
+      officialFacts,
+      previousResolutions
     );
     
     console.log(`📊 Analysis complete: ${analysis.discrepancies.length} discrepancies found`);

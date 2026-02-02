@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldAlert, 
   ExternalLink, 
@@ -21,6 +21,8 @@ export default function Discrepancies() {
   const [filterClient, setFilterClient] = useState('');
   const [filterCentre, setFilterCentre] = useState('');
   const [showResolved, setShowResolved] = useState(false);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [resolutionNotes, setResolutionNotes] = useState('');
 
   useEffect(() => {
     fetchDiscrepancies();
@@ -39,16 +41,19 @@ export default function Discrepancies() {
     }
   };
 
-  const handleMarkSolved = async (discrepancyId: string) => {
+  const handleMarkSolved = async () => {
+    if (!resolvingId) return;
+    
     try {
-      const res = await fetch(`/api/discrepancies/${discrepancyId}/resolve`, {
+      const res = await fetch(`/api/discrepancies/${resolvingId}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: 'Risolto dall\'utente' })
+        body: JSON.stringify({ notes: resolutionNotes || 'Risolto dall\'utente' })
       });
 
       if (res.ok) {
-        // Refresh the list
+        setResolvingId(null);
+        setResolutionNotes('');
         fetchDiscrepancies();
       }
     } catch (err) {
@@ -232,7 +237,7 @@ export default function Discrepancies() {
                   <div className="flex gap-2">
                     {!note.resolved && (
                       <button
-                        onClick={() => handleMarkSolved(note.id)}
+                        onClick={() => setResolvingId(note.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors text-sm"
                       >
                         <CheckCircle size={16} /> Mark as Solved
@@ -251,6 +256,55 @@ export default function Discrepancies() {
           ))
         )}
       </div>
+
+      {/* Resolution Modal */}
+      <AnimatePresence>
+        {resolvingId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 className="text-lg font-bold text-slate-900">Risolvi Discrepanza</h2>
+                <button onClick={() => setResolvingId(null)} className="text-slate-400 hover:text-slate-600">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="p-6">
+                <p className="text-sm text-slate-600 mb-4">
+                  Aggiungi una nota o una giustificazione. Questa verrà salvata e usata dall'IA come memoria per non segnalare più questa discrepanza se non necessario.
+                </p>
+                
+                <textarea
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  placeholder="Esempio: La variazione delle date è corretta perché..."
+                  className="w-full h-32 p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                />
+              </div>
+              
+              <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button 
+                  onClick={() => setResolvingId(null)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
+                >
+                  Annulla
+                </button>
+                <button 
+                  onClick={handleMarkSolved}
+                  className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors text-sm shadow-sm"
+                >
+                  Confirm Resolution
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

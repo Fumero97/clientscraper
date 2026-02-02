@@ -15,8 +15,16 @@ export async function analyzeDiscrepancies(
   clientUrl: string,
   clientText: string, 
   officialUrl: string,
-  officialFacts: OfficialFactSheet
+  officialFacts: OfficialFactSheet,
+  previousResolutions: { description: string, resolution: string }[] = []
 ) {
+  const memoryContext = previousResolutions.length > 0 
+    ? `
+      MEMORY (Previously resolved issues to IGNORE if they match):
+      ${previousResolutions.map(r => `- Issue: ${r.description}\n  User Resolution/Note: ${r.resolution}`).join('\n')}
+      `
+    : '';
+
   const prompt = `
     COMPARE:
     
@@ -31,6 +39,8 @@ export async function analyzeDiscrepancies(
     TARGET CLIENT PAGE (${clientUrl}):
     ${clientText.substring(0, 15000)}
 
+    ${memoryContext}
+
     TASK: Identify FACTUAL discrepancies. 
     Focus on:
     - Dates (Are they the same? Or does the client page show dates not in the official list?)
@@ -38,7 +48,9 @@ export async function analyzeDiscrepancies(
     - Location/College (Is it the correct campus?)
     - Inclusion (Meals, hours of study, etc.)
 
-    CRITICAL: If the official source mentions multiple dates and the client shows one of them, it is NOT a discrepancy unless the client explicitly excludes the others.
+    CRITICAL INSTRUCTIONS:
+    1. If a discrepancy matches something in the MEMORY section, IGNORE it. The user has already validated or justified it.
+    2. If the official source mentions multiple dates and the client shows one of them, it is NOT a discrepancy unless the client explicitly excludes the others.
     
     OUTPUT JSON directly (in Italian):
     {
