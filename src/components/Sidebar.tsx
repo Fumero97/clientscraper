@@ -23,13 +23,15 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-logo">
-        <div className="logo-icon">C</div>
+    <div className="w-[280px] h-screen bg-white border-r border-slate-200 fixed left-0 top-0 flex flex-col z-50">
+      <div className="p-8 flex items-center gap-3 text-xl font-bold tracking-tight text-slate-900">
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+          C
+        </div>
         <span>Coherence AI</span>
       </div>
       
-      <nav className="sidebar-nav">
+      <nav className="flex-1 px-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
@@ -37,16 +39,20 @@ export default function Sidebar() {
           return (
             <Link key={item.path} href={item.path}>
               <motion.div 
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                whileHover={{ x: 5 }}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-1 relative transition-colors ${
+                  isActive 
+                    ? 'text-blue-700 bg-blue-50 font-medium' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+                whileHover={{ x: 3 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Icon size={20} />
+                <Icon size={20} className={isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'} />
                 <span>{item.name}</span>
                 {isActive && (
                   <motion.div 
                     layoutId="active-nav"
-                    className="active-indicator"
+                    className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 rounded-r-lg"
                   />
                 )}
               </motion.div>
@@ -55,123 +61,17 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="user-profile">
-          <div className="avatar">JD</div>
-          <div className="user-info">
-            <p className="name">User Agent</p>
-            <p className="role">Administrator</p>
+      <div className="p-6 border-t border-slate-100">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center font-semibold text-slate-600">
+            JD
+          </div>
+          <div className="flex flex-col">
+            <p className="font-semibold text-sm text-slate-900">User Agent</p>
+            <p className="text-xs text-slate-500">Administrator</p>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        .sidebar {
-          width: 280px;
-          height: 100vh;
-          background: var(--sidebar-bg);
-          border-right: 1px solid var(--border-color);
-          position: fixed;
-          left: 0;
-          top: 0;
-          display: flex;
-          flex-direction: column;
-          z-index: 1000;
-        }
-
-        .sidebar-logo {
-          padding: 32px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 20px;
-          font-weight: 700;
-          letter-spacing: -0.02em;
-        }
-
-        .logo-icon {
-          width: 32px;
-          height: 32px;
-          background: var(--accent-color);
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 18px;
-          box-shadow: 0 0 15px var(--accent-glow);
-        }
-
-        .sidebar-nav {
-          padding: 0 16px;
-          flex: 1;
-        }
-
-        .nav-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 16px;
-          border-radius: 12px;
-          color: var(--text-secondary);
-          position: relative;
-          margin-bottom: 4px;
-          transition: color 0.2s ease;
-        }
-
-        .nav-item:hover {
-          color: var(--text-primary);
-          background: rgba(255, 255, 255, 0.03);
-        }
-
-        .nav-item.active {
-          color: var(--text-primary);
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        .active-indicator {
-          position: absolute;
-          left: 0;
-          top: 8px;
-          bottom: 8px;
-          width: 3px;
-          background: var(--accent-color);
-          border-radius: 0 4px 4px 0;
-        }
-
-        .sidebar-footer {
-          padding: 24px;
-          border-top: 1px solid var(--border-color);
-        }
-
-        .user-profile {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .avatar {
-          width: 40px;
-          height: 40px;
-          background: var(--card-bg);
-          border: 1px solid var(--border-color);
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 600;
-          font-size: 14px;
-        }
-
-        .user-info .name {
-          font-weight: 600;
-          font-size: 14px;
-        }
-
-        .user-info .role {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-      `}</style>
     </div>
   );
 }

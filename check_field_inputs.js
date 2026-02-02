@@ -11,7 +11,6 @@ async function checkCentroField() {
     const pages = await base('Client Web Pages').select({ maxRecords: 1 }).all();
     if (pages.length > 0) {
       console.log('Sample Record Fields:');
-      console.log('Centro:', pages[0].get('Centro'));
       console.log('Web Page URL:', pages[0].get('Web Page URL'));
       
       // Check if 'Reference page' exists or if it comes from Centro linkage

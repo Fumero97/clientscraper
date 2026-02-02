@@ -14,15 +14,14 @@ export async function extractProductDetails(sourceUrl?: string, rawText?: string
   }
 
   const prompt = `
-    Extract all product and service names, their descriptions, and their prices from the text below.
-    This text usually comes from a company website or a marketing brochure.
-    
-    Text:
+    TASK: Extract products/services from text.
+    SOURCE:
     ${content.substring(0, 12000)}
     
-    Return a VALID JSON array:
-    [{ "name": "...", "description": "...", "price": "..." }]
-    If no products are found, return [].
+    OUTPUT JSON:
+    [{ "name": "Exact Name", "description": "Short desc", "price": "Price string or null" }]
+    
+    If nothing found: []
   `;
 
   try {

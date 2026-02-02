@@ -14,10 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <div className="layout-wrapper">
+      <body className="bg-slate-50 text-slate-900 font-sans antialiased">
+        <div className="flex min-h-screen">
           <Sidebar />
-          <main className="main-content">
+          <main className="flex-1 ml-[280px] p-8 transition-all duration-300">
             {children}
           </main>
         </div>

@@ -4,6 +4,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+export interface Discrepancy {
+  name: string;           // Short title for the discrepancy
+  description: string;    // MOST IMPORTANT: Detailed, actionable description
+  severity?: 'High' | 'Medium' | 'Low';
+}
+
 export async function analyzeDiscrepancies(
   clientUrl: string,
   clientText: string, 
@@ -11,34 +17,23 @@ export async function analyzeDiscrepancies(
   officialText: string
 ) {
   const prompt = `
-    You are a corporate compliance analyst specializing in reviewing reseller websites.
-    Your goal is to compare the "Official Offering" with the "Client Web Page" to ensure factual accuracy.
-
-    **Input Data**:
-    1. OFFICIAL OFFERING (Reference):
-    - URL: ${officialUrl}
-    - Content:
+    COMPARE:
+    OFFICIAL SOURCE: ${officialUrl}
     ${officialText.substring(0, 15000)}
 
-    2. CLIENT WEB PAGE (Reseller):
-    - URL: ${clientUrl}
-    - Content:
+    TARGET CLIENT PAGE: ${clientUrl}
     ${clientText.substring(0, 15000)}
 
-    **Comparison Criteria**:
-    Verify the following key elements. Focus ONLY on factual content, ignore style/formatting.
-    - **Dates**: Departure/arrival dates, duration, availability periods.
-    - **Age**: Allowed age ranges, min/max requirements.
-    - **Excursions**: Included trips, frequency, specific destinations.
-    - **Addresses**: Exact location of campus/residence.
-    - **English Hours**: Weekly hours, course type, certifications.
-    - **Other Details**: Accommodation type, meals, transfers, included activities.
+    TASK: Identify FACTUAL discrepancies (Dates, Prices, Services, Location).
+    IGNORE: Style, Marketing text.
 
-    **Output Format**:
-    Return a JSON object with the following fields:
-    - "discrepancySummary": A concise plain text analysis of discrepancies found (in Italian). If aligned, say "Nessuna discrepanza rilevata."
-    - "coherenceScore": One of ["Piena Coerenza", "Discrepanze Minori", "Critico"].
-    - "discrepancies": An array of objects [{ "name": "Short Title", "description": "Technical detailed description of the error", "severity": "High/Medium/Low", "actionRecommendation": "Short action for account manager (max 15 words)" }]
+    OUTPUT JSON directly (in Italian):
+    {
+      "discrepancies": [
+        { "name": "Short label", "description": "Specific detail: Client says X but Official says Y.", "severity": "High"|"Medium"|"Low" }
+      ],
+      "summary": "1 sentence summary."
+    }
   `;
 
   try {
@@ -49,13 +44,17 @@ export async function analyzeDiscrepancies(
     });
 
     const content = response.choices[0].message.content || '{}';
-    return JSON.parse(content);
+    const result = JSON.parse(content);
+    
+    return {
+      discrepancies: result.discrepancies || [],
+      summary: result.summary || "Analisi completata."
+    };
   } catch (error) {
     console.error('AI Analysis error:', error);
     return {
-      discrepancySummary: "Errore durante l'analisi AI.",
-      coherenceScore: "Da verificare",
-      discrepancies: []
+      discrepancies: [],
+      summary: "Errore durante l'analisi AI."
     };
   }
 }

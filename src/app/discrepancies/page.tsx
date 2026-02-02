@@ -7,15 +7,20 @@ import {
   ExternalLink, 
   CheckCircle,
   Eye,
-  MoreVertical,
   Calendar,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  Filter,
+  X
 } from 'lucide-react';
 
 export default function Discrepancies() {
   const [discrepancies, setDiscrepancies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterClient, setFilterClient] = useState('');
+  const [filterCentre, setFilterCentre] = useState('');
+  const [showResolved, setShowResolved] = useState(false);
 
   useEffect(() => {
     fetchDiscrepancies();
@@ -34,81 +39,211 @@ export default function Discrepancies() {
     }
   };
 
+  const handleMarkSolved = async (discrepancyId: string) => {
+    try {
+      const res = await fetch(`/api/discrepancies/${discrepancyId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: 'Risolto dall\'utente' })
+      });
+
+      if (res.ok) {
+        // Refresh the list
+        fetchDiscrepancies();
+      }
+    } catch (err) {
+      console.error('Error marking as solved:', err);
+    }
+  };
+
+  // Get unique clients and centres for filters
+  const uniqueClients = Array.from(new Set(discrepancies.map(d => d.client).filter(Boolean)));
+  const uniqueCentres = Array.from(new Set(discrepancies.map(d => d.product).filter(Boolean)));
+
+  // Filter discrepancies
+  const filteredDiscrepancies = discrepancies.filter(disc => {
+    const clientMatch = !filterClient || disc.client === filterClient;
+    const centreMatch = !filterCentre || disc.product === filterCentre;
+    const resolvedMatch = showResolved || !disc.resolved;
+    
+    return clientMatch && centreMatch && resolvedMatch;
+  });
+
   if (loading) return (
-    <div className="loading-state">
-      <Loader2 className="spinning" />
-      <style jsx>{`
-        .loading-state { height: 80vh; display: flex; align-items: center; justify-content: center; }
-        .spinning { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+    <div className="h-[80vh] flex flex-col items-center justify-center gap-4 text-slate-500">
+      <Loader2 className="animate-spin" size={32} />
+      <span>Caricamento discrepanze...</span>
     </div>
   );
 
   return (
-    <div className="discrepancies">
-      <header className="page-header">
+    <div className="w-full">
+      <header className="flex justify-between items-center mb-8">
         <div>
-          <h1>Discrepancy Notes</h1>
-          <p className="subtitle">Identified inconsistencies synced from Airtable</p>
+          <h1 className="text-2xl font-bold text-slate-900">Discrepancy Notes</h1>
+          <p className="text-sm text-slate-500 mt-1">Identified inconsistencies synced from Airtable</p>
         </div>
         
-        <div className="header-actions">
-          <button className="btn-primary" onClick={fetchDiscrepancies}>
-            <RefreshCw size={18} /> Refresh
+        <div className="flex gap-4">
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm text-sm"
+            onClick={fetchDiscrepancies}
+          >
+            <RefreshCw size={16} /> Refresh
           </button>
         </div>
       </header>
 
-      <div className="discrepancy-list animate-fade-in">
-        {discrepancies.length === 0 ? (
-          <div className="empty-state">No discrepancies found. All clear!</div>
+      {/* Filters */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Filter size={16} className="text-slate-500" />
+          <span className="text-sm font-semibold text-slate-700">Filters</span>
+        </div>
+        
+        <div className="flex flex-wrap gap-3">
+          {/* Client Filter */}
+          <select
+            value={filterClient}
+            onChange={(e) => setFilterClient(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Clients</option>
+            {uniqueClients.map(client => (
+              <option key={client} value={client}>{client}</option>
+            ))}
+          </select>
+
+          {/* Centre Filter */}
+          <select
+            value={filterCentre}
+            onChange={(e) => setFilterCentre(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Centres</option>
+            {uniqueCentres.map(centre => (
+              <option key={centre} value={centre}>{centre}</option>
+            ))}
+          </select>
+
+          {/* Show Resolved Toggle */}
+          <label className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-lg text-sm cursor-pointer hover:bg-slate-50">
+            <input
+              type="checkbox"
+              checked={showResolved}
+              onChange={(e) => setShowResolved(e.target.checked)}
+              className="rounded"
+            />
+            <span>Show Resolved</span>
+          </label>
+
+          {/* Clear Filters */}
+          {(filterClient || filterCentre) && (
+            <button
+              onClick={() => {
+                setFilterClient('');
+                setFilterCentre('');
+              }}
+              className="flex items-center gap-1 px-3 py-2 text-slate-600 hover:text-slate-900 text-sm"
+            >
+              <X size={14} /> Clear
+            </button>
+          )}
+        </div>
+
+        <div className="mt-2 text-xs text-slate-500">
+          Showing {filteredDiscrepancies.length} of {discrepancies.length} discrepancies
+        </div>
+      </div>
+
+      {/* Discrepancies List */}
+      <div className="flex flex-col gap-6">
+        {filteredDiscrepancies.length === 0 ? (
+          <div className="p-20 text-center text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
+             <CheckCircle className="mx-auto mb-4 text-slate-300" size={48} />
+             <p className="text-lg font-medium text-slate-900">All clear!</p>
+             <p className="text-sm">No discrepancies found matching your filters.</p>
+          </div>
         ) : (
-          discrepancies.map((note, index) => (
+          filteredDiscrepancies.map((note, index) => (
             <motion.div 
               key={note.id}
-              className="discrepancy-card glass"
+              className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-shadow ${
+                note.resolved ? 'border-slate-200 opacity-60' : 'border-slate-200'
+              }`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
-              <div className="card-media">
-                <img src={note.screenshot || 'https://picsum.photos/seed/dis/400/250'} alt="Evidence" />
-                <div className={`severity-tag ${note.severity?.toLowerCase() || 'medium'}`}>
-                  {note.severity || 'Medium'}
-                </div>
-              </div>
-              
-              <div className="card-content">
-                <div className="card-header">
-                  <h3>{note.name}</h3>
-                  <div className="status-badge">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                       {note.severity && (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border
+                          ${note.severity === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 
+                            note.severity === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                            'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                          {note.severity}
+                        </span>
+                      )}
+                      <h3 className="text-lg font-bold text-slate-900 leading-tight">{note.name}</h3>
+                    </div>
+                    
+                    {/* Description - MOST IMPORTANT FIELD */}
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                        {note.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 ml-4">
                     {note.resolved ? (
-                      <span className="resolved"><CheckCircle size={14} /> Resolved</span>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
+                        <CheckCircle size={14} /> Resolved
+                      </span>
                     ) : (
-                      <span className="pending"><ShieldAlert size={14} /> Unresolved</span>
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600">
+                        <ShieldAlert size={14} /> Unresolved
+                      </span>
                     )}
                   </div>
                 </div>
 
-                <p className="description">{note.description}</p>
-
-                <div className="card-footer">
-                  <div className="meta-info">
-                    <div className="meta-item">
-                      <strong>Client:</strong> {note.client || 'N/A'}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end pt-5 mt-auto border-t border-slate-100 gap-4">
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-900 mb-0.5">Client</span>
+                      {note.client || 'N/A'}
                     </div>
-                    <div className="meta-item">
-                      <strong>Product:</strong> {note.product || 'N/A'}
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-900 mb-0.5">Centre</span>
+                      {note.product || 'N/A'}
                     </div>
-                    <div className="meta-item calendar">
-                      <Calendar size={12} /> {new Date(note.date).toLocaleDateString()}
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-900 mb-0.5">Detected</span>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar size={12} /> {note.date ? new Date(note.date).toLocaleDateString() : 'N/A'}
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="card-actions">
-                    <button className="icon-btn"><Eye size={18} /></button>
-                    <button className="icon-btn"><ExternalLink size={18} /></button>
+                  <div className="flex gap-2">
+                    {!note.resolved && (
+                      <button
+                        onClick={() => handleMarkSolved(note.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors text-sm"
+                      >
+                        <CheckCircle size={16} /> Mark as Solved
+                      </button>
+                    )}
+                    <button className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+                      <Eye size={18} />
+                    </button>
+                    <button className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+                      <ExternalLink size={18} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -116,37 +251,6 @@ export default function Discrepancies() {
           ))
         )}
       </div>
-
-      <style jsx>{`
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-        h1 { font-size: 28px; margin-bottom: 4px; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; }
-        .btn-primary { background: var(--accent-color); color: white; padding: 10px 16px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .discrepancy-list { display: flex; flex-direction: column; gap: 20px; }
-        .discrepancy-card { display: grid; grid-template-columns: 300px 1fr; border-radius: 20px; overflow: hidden; transition: transform 0.2s; }
-        .discrepancy-card:hover { transform: translateY(-2px); }
-        .card-media { position: relative; height: 100%; }
-        .card-media img { width: 100%; height: 100%; object-fit: cover; }
-        .severity-tag { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-        .severity-tag.high { background: var(--danger-color); color: white; }
-        .severity-tag.medium { background: var(--warning-color); color: white; }
-        .card-content { padding: 24px; display: flex; flex-direction: column; }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .card-header h3 { font-size: 18px; font-weight: 600; }
-        .status-badge span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-        .status-badge .resolved { color: var(--success-color); }
-        .status-badge .pending { color: var(--danger-color); }
-        .description { color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 24px; flex: 1; }
-        .card-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; border-top: 1px solid var(--border-color); }
-        .meta-info { display: flex; gap: 20px; }
-        .meta-item { font-size: 12px; color: var(--text-secondary); }
-        .meta-item strong { color: var(--text-primary); font-weight: 500; }
-        .calendar { display: flex; align-items: center; gap: 6px; }
-        .card-actions { display: flex; gap: 8px; }
-        .icon-btn { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); background: rgba(255, 255, 255, 0.03); transition: all 0.2s; }
-        .empty-state { padding: 80px; text-align: center; color: var(--text-secondary); background: var(--card-bg); border-radius: 20px; border: 1px dashed var(--border-color); }
-        @media (max-width: 768px) { .discrepancy-card { grid-template-columns: 1fr; } .card-media { height: 180px; } }
-      `}</style>
     </div>
   );
 }

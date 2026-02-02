@@ -51,95 +51,75 @@ export default function ProductsReference() {
   };
 
   if (loading) return (
-    <div className="loading-state">
-      <Loader2 className="spinning" />
-      <style jsx>{`
-        .loading-state { height: 80vh; display: flex; align-items: center; justify-content: center; }
-        .spinning { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+    <div className="h-[80vh] flex flex-col items-center justify-center gap-4 text-slate-500">
+      <Loader2 className="animate-spin" size={32} />
+      <span>Caricamento prodotti...</span>
     </div>
   );
 
   return (
-    <div className="products-ref">
-      <header className="page-header">
+    <div className="w-full">
+      <header className="flex justify-between items-center mb-8">
         <div>
-          <h1>Products Reference</h1>
-          <p className="subtitle">Source of Truth for official offerings from Airtable</p>
+          <h1 className="text-2xl font-bold text-slate-900">Products Reference</h1>
+          <p className="text-sm text-slate-500 mt-1">Source of Truth for official offerings from Airtable</p>
         </div>
         
-        <div className="header-actions">
-          <button className="btn-secondary" onClick={handleSmartImport} disabled={isImporting}>
-            {isImporting ? <Sparkles className="spinning" size={18} /> : <Sparkles size={18} />}
-            {isImporting ? 'Analyzing Site & Brochure...' : 'Smart Import (AI Agent)'}
+        <div className="flex gap-3">
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg font-semibold hover:bg-purple-100 transition-colors shadow-sm text-sm"
+            onClick={handleSmartImport} 
+            disabled={isImporting}
+          >
+            {isImporting ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            {isImporting ? 'Analyzing...' : 'Smart Import (AI Agent)'}
           </button>
-          <button className="btn-primary" onClick={fetchProducts}>
-            <RefreshCw size={18} /> Refresh
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm text-sm"
+            onClick={fetchProducts}
+          >
+            <RefreshCw size={16} /> Refresh
           </button>
         </div>
       </header>
 
-      <div className="data-table-container animate-fade-in">
-        <table className="data-table">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr>
-              <th>Product / Service Name</th>
-              <th>Description</th>
-              <th>Official Price</th>
-              <th>Status</th>
-              <th>AI Coherence Summary</th>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Product / Service Name</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Description</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             {products.map((product) => (
-              <tr key={product.id}>
-                <td className="name-cell">
-                  <div className="product-icon"><Tag size={16} /></div>
-                  <strong>{product.name}</strong>
-                </td>
-                <td className="desc-cell">{product.description}</td>
-                <td className="price-cell">
-                  <div className="price-tag">{product.price}</div>
-                </td>
-                <td>
-                  {product.active ? (
-                    <div className="status-pill active"><CheckCircle size={14} /> Active</div>
-                  ) : (
-                    <div className="status-pill inactive"><XCircle size={14} /> Inactive</div>
-                  )}
-                </td>
-                <td>
-                  <div className="ai-summary">
-                    <Sparkles size={14} className="sparkle" />
-                    <span>{product.coherence || 'No AI summary yet.'}</span>
+              <tr key={product.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center border border-slate-200">
+                      <Tag size={14} />
+                    </div>
+                    <strong>{product.name}</strong>
                   </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-500 max-w-xs">{product.description}</td>
+                <td className="px-6 py-4">
+                  {product.active ? (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
+                      <CheckCircle size={12} /> Active
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                      <XCircle size={12} /> Inactive
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      <style jsx>{`
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-        h1 { font-size: 28px; margin-bottom: 4px; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; }
-        .header-actions { display: flex; gap: 12px; }
-        .btn-primary { background: var(--accent-color); color: white; padding: 10px 16px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .btn-secondary { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); padding: 10px 16px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .name-cell { display: flex; align-items: center; gap: 12px; }
-        .product-icon { width: 32px; height: 32px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .desc-cell { max-width: 300px; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
-        .price-tag { font-family: monospace; font-weight: 700; color: var(--success-color); font-size: 15px; }
-        .status-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 100px; }
-        .status-pill.active { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
-        .status-pill.inactive { background: rgba(100, 116, 139, 0.1); color: var(--text-secondary); }
-        .ai-summary { display: flex; gap: 10px; background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 10px; font-size: 13px; border: 1px solid var(--border-color); }
-        .sparkle { color: #a78bfa; }
-        .spinning { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }

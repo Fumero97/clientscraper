@@ -11,7 +11,9 @@ import {
   RefreshCw,
   Image as ImageIcon,
   FileText,
-  Loader2
+  Loader2,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function WebPages() {
@@ -46,94 +48,102 @@ export default function WebPages() {
       });
       const data = await resp.json();
       if (data.success) {
-        // Refresh pages after scan
+        // Show success notification
+        alert(`✅ Scan completato!\n\n` +
+              `Nuove discrepanze: ${data.newDiscrepanciesCount}\n` +
+              `Duplicati evitati: ${data.skippedDuplicates}\n\n` +
+              `${data.summary}`);
         fetchPages();
+      } else {
+        alert(`❌ Errore durante lo scan: ${data.error}`);
       }
     } catch (err) {
       console.error(err);
+      alert('❌ Errore di connessione durante lo scan');
     } finally {
       setIsScanning(null);
     }
   };
 
   if (loading) return (
-    <div className="loading-state">
-      <Loader2 className="spinning" />
-      <style jsx>{`
-        .loading-state { height: 80vh; display: flex; align-items: center; justify-content: center; }
-        .spinning { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+    <div className="h-[80vh] flex flex-col items-center justify-center gap-4 text-slate-500">
+      <Loader2 className="animate-spin" size={32} />
+      <span>Caricamento pagine...</span>
     </div>
   );
 
   return (
-    <div className="web-pages">
-      <header className="page-header">
+    <div className="w-full">
+      <header className="flex justify-between items-center mb-8">
         <div>
-          <h1>Client Web Pages</h1>
-          <p className="subtitle">Manage and monitor client-facing URLs from Airtable</p>
+          <h1 className="text-2xl font-bold text-slate-900">Client Web Pages</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage and monitor client-facing URLs from Airtable</p>
         </div>
         
-        <div className="header-actions">
-          <button className="btn-primary" onClick={fetchPages}>
-            <RefreshCw size={18} /> Refresh
+        <div className="flex gap-4">
+          <button 
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm text-sm"
+            onClick={fetchPages}
+          >
+            <RefreshCw size={16} /> Refresh
           </button>
         </div>
       </header>
 
-      <div className="data-table-container animate-fade-in">
-        <table className="data-table">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr>
-              <th>Client Name</th>
-              <th>Web Page URL</th>
-              <th>Media</th>
-              <th>Last Checked</th>
-              <th>Status</th>
-              <th># Discrepancies</th>
-              <th>Actions</th>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Client Name</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Centres</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Web Page URL</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Checked</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-slate-100">
             <AnimatePresence>
               {pages.map((page) => (
-                <motion.tr key={page.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <td><strong>{page.client || 'N/A'}</strong></td>
-                  <td>
-                    <a href={page.url} target="_blank" className="url-link">
-                      {page.url} <ExternalLink size={12} />
+                <motion.tr 
+                  key={page.id} 
+                  layout 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }}
+                  className="hover:bg-slate-50 transition-colors"
+                >
+                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{page.client || 'N/A'}</td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm text-slate-600">{page.centres || 'N/A'}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <a href={page.url} target="_blank" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-xs font-mono">
+                      <span className="truncate max-w-[200px]">{page.url}</span> <ExternalLink size={12} />
                     </a>
                   </td>
-                  <td>
-                    <div className="media-cell">
-                      <div className={`media-icon ${page.screenshot ? 'active' : ''}`} title="Screenshot">
-                        <ImageIcon size={14} />
-                      </div>
-                      <div className={`media-icon ${page.text ? 'active' : ''}`} title="Transcribed Text">
-                        <FileText size={14} />
-                      </div>
-                    </div>
+                  <td className="px-6 py-4 text-xs text-slate-500">
+                    {page.lastChecked ? new Date(page.lastChecked).toLocaleString() : 'Never'}
                   </td>
-                  <td className="time-cell">{page.lastChecked ? new Date(page.lastChecked).toLocaleString() : 'Never'}</td>
-                  <td>
-                    <span className={`badge ${page.status === 'Verificata' ? 'badge-low' : 'badge-medium'}`}>
-                      {page.status || 'Da verificare'}
-                    </span>
+                  <td className="px-6 py-4">
+                    {page.discrepancies === 0 ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600">
+                        <CheckCircle size={14} /> Verificato
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600">
+                        <AlertTriangle size={14} /> {page.discrepancies} {page.discrepancies === 1 ? 'discrepancy' : 'discrepancies'}
+                      </span>
+                    )}
                   </td>
-                  <td>
-                    <div className={`discrepancy-count ${page.discrepancies > 0 ? 'alert' : ''}`}>
-                      {page.discrepancies}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="actions-cell">
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2">
                       <button 
-                        className={`action-btn run ${isScanning === page.id ? 'spinning' : ''}`}
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-indigo-50 text-indigo-600 hover:bg-indigo-100
+                          ${isScanning === page.id ? 'opacity-70 cursor-not-allowed' : ''}`}
                         onClick={() => startScan(page.id)}
                         disabled={isScanning !== null}
                       >
-                        {isScanning === page.id ? <RefreshCw size={16} /> : <Play size={16} />}
+                        {isScanning === page.id ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
                       </button>
                     </div>
                   </td>
@@ -143,26 +153,6 @@ export default function WebPages() {
           </tbody>
         </table>
       </div>
-
-      <style jsx>{`
-        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-        h1 { font-size: 28px; margin-bottom: 4px; }
-        .subtitle { color: var(--text-secondary); font-size: 14px; }
-        .header-actions { display: flex; gap: 16px; }
-        .btn-primary { background: var(--accent-color); color: white; padding: 10px 16px; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .url-link { color: var(--accent-color); display: flex; align-items: center; gap: 6px; font-family: monospace; font-size: 13px; }
-        .media-cell { display: flex; gap: 8px; }
-        .media-icon { width: 28px; height: 28px; border-radius: 6px; background: rgba(255, 255, 255, 0.03); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); }
-        .media-icon.active { color: var(--accent-color); background: rgba(59, 130, 246, 0.1); }
-        .time-cell { color: var(--text-secondary); font-size: 13px; }
-        .discrepancy-count { width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
-        .discrepancy-count.alert { background: rgba(239, 68, 68, 0.1); color: var(--danger-color); }
-        .actions-cell { display: flex; gap: 8px; }
-        .action-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
-        .action-btn.run { background: rgba(16, 185, 129, 0.1); color: var(--success-color); }
-        .spinning { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }
