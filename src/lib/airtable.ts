@@ -77,9 +77,7 @@ export async function createDiscrepancyNote(data: {
       'Client Web Page': [data.pageId]
     };
 
-    if (data.severity) {
-      fields['Severity Level'] = data.severity;
-    }
+    // Severity Level removed as it doesn't exist in Airtable schema
 
     const record = await tables.discrepancies.create(fields) as any;
     

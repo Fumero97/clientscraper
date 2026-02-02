@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { tables } from '@/lib/airtable';
 
+export const dynamic = 'force-dynamic';
+
 // Helper to ensure values are primitives for React rendering
 function sanitizeValue(value: any): any {
   if (value === null || value === undefined) return null;
@@ -11,6 +13,7 @@ function sanitizeValue(value: any): any {
     return value.join(', ');
   }
   if (typeof value === 'object') {
+    // Handle Airtable specific object structures if any
     if ('value' in value) return value.value || '';
     return JSON.stringify(value);
   }
@@ -38,6 +41,24 @@ export async function GET() {
     // Map discrepancies to pages to calculate accurate counts
     const discrepancyCounts = new Map<string, number>();
     
+    // Create a lookup for Client Name by Page ID
+    const clientNameMap = new Map<string, string>();
+    // Create a lookup for Centre Name by Page ID
+    const pageIdToCentreNameMap = new Map<string, string>();
+
+    pagesRecords.forEach(record => {
+      const clientName = sanitizeValue(record.get('Client Name'));
+      clientNameMap.set(record.id, clientName);
+      
+      const centreIds = record.get('Centres');
+      if (Array.isArray(centreIds) && centreIds.length > 0) {
+        const firstCentreName = centresMap.get(centreIds[0]);
+        if (firstCentreName) {
+          pageIdToCentreNameMap.set(record.id, firstCentreName);
+        }
+      }
+    });
+
     discrepanciesRecords.forEach(record => {
       const pageIds = record.get('Client Web Page') as string[];
       // Check resolved status using our robust logic
@@ -51,27 +72,35 @@ export async function GET() {
       }
     });
 
-    const pages = pagesRecords.map(record => {
-      const centreIds = record.get('Centres');
-      let centreName = 'N/A';
-      
-      if (Array.isArray(centreIds) && centreIds.length > 0) {
-        // Get the first centre name from the map
-        centreName = centresMap.get(centreIds[0]) || 'N/A';
-      }
-      
-      // Use our calculated count instead of the Airtable field
-      const calculatedCount = discrepancyCounts.get(record.id) || 0;
-      
-      return {
-        id: record.id,
-        client: sanitizeValue(record.get('Client Name')),
-        url: record.get('Web Page URL'),
-        centres: centreName,
-        discrepancies: calculatedCount,
-        lastChecked: record.get('Last Checked Date'),
-      };
-    });
+    const pages = pagesRecords
+      .map(record => {
+        const centreIds = record.get('Centres');
+        let centreName = 'N/A';
+        
+        if (Array.isArray(centreIds) && centreIds.length > 0) {
+          // Get the first centre name from the map
+          centreName = centresMap.get(centreIds[0]) || 'N/A';
+        }
+        
+        // Use our calculated count instead of the Airtable field
+        const calculatedCount = discrepancyCounts.get(record.id) || 0;
+        
+        return {
+          id: record.id,
+          client: sanitizeValue(record.get('Client Name')),
+          url: sanitizeValue(record.get('Web Page URL')), // Added sanitization
+          centres: centreName,
+          discrepancies: calculatedCount,
+          lastChecked: record.get('Last Checked Date'),
+          createdTime: (record as any)._rawJson?.createdTime, // For sorting
+        };
+      })
+      .sort((a, b) => {
+        // Sort by createdTime descending (newest first)
+        const dateA = new Date(a.createdTime || 0).getTime();
+        const dateB = new Date(b.createdTime || 0).getTime();
+        return dateB - dateA; 
+      });
 
     // Updated to use 'Centres' fields
     const products = productsRecords.map(record => ({
@@ -83,17 +112,30 @@ export async function GET() {
       coherence: sanitizeValue(record.get('Coerenza Web vs Offerta Aziendale (AI)')),
     }));
 
-    const discrepancies = discrepanciesRecords.map(record => ({
-      id: record.id,
-      name: sanitizeValue(record.get('Name')),
-      description: sanitizeValue(record.get('Discrepancy Description')),
-      severity: sanitizeValue(record.get('Severity Level')), // Might be missing based on list_tables.js?
-      client: sanitizeValue(record.get('Client Web Page')), // Using Link field
-      product: sanitizeValue(record.get('Product or Service')), // Using Link field
-      date: (record as any)._rawJson?.createdTime || new Date().toISOString(),
-      resolved: record.get('Resolved') || !!record.get('Resolution Notes'),
-      screenshot: sanitizeValue(record.get('Screenshot')),
-    }));
+    const discrepancies = discrepanciesRecords.map(record => {
+      // Resolve Client Name and Centre Name from Linked Page ID
+      const pageIds = record.get('Client Web Page') as string[];
+      let clientName = null;
+      let centreName = null;
+      
+      if (Array.isArray(pageIds) && pageIds.length > 0) {
+        const pageId = pageIds[0];
+        clientName = clientNameMap.get(pageId);
+        centreName = pageIdToCentreNameMap.get(pageId);
+      }
+
+      return {
+        id: record.id,
+        name: sanitizeValue(record.get('Name')),
+        description: sanitizeValue(record.get('Discrepancy Description')),
+        severity: sanitizeValue(record.get('Severity Level')), 
+        client: clientName || sanitizeValue(record.get('Client Web Page')), 
+        product: centreName || sanitizeValue(record.get('Product or Service')), // Resolved Name or Fallback
+        date: (record as any)._rawJson?.createdTime || new Date().toISOString(),
+        resolved: record.get('Resolved') || !!record.get('Resolution Notes'),
+        screenshot: sanitizeValue(record.get('Screenshot')),
+      };
+    });
 
     return NextResponse.json({ pages, products, discrepancies });
   } catch (error: any) {

@@ -117,9 +117,13 @@ export default function WebPages() {
                     <span className="text-sm text-slate-600">{page.centres || 'N/A'}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <a href={page.url} target="_blank" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-xs font-mono">
-                      <span className="truncate max-w-[200px]">{page.url}</span> <ExternalLink size={12} />
-                    </a>
+                    {page.url ? (
+                      <a href={page.url} target="_blank" className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-xs font-mono">
+                        <span className="truncate max-w-[200px]">{page.url}</span> <ExternalLink size={12} />
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic">No URL provided</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-xs text-slate-500">
                     {page.lastChecked ? new Date(page.lastChecked).toLocaleString() : 'Never'}

@@ -72,8 +72,7 @@ export async function POST(request: Request) {
           await createDiscrepancyNote({
             name: discrepancy.name,
             description: discrepancy.description,
-            pageId: pageId,
-            severity: discrepancy.severity
+            pageId: pageId
           });
           
           createdCount++;
