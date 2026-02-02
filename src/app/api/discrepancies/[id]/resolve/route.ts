@@ -3,9 +3,10 @@ import { markDiscrepancyResolved, tables } from '@/lib/airtable';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const { id } = params;
     const body = await request.json();
     const { notes } = body;
