@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { scrapeWebPage } from '@/lib/agents/scraper';
+import { extractOfficialFacts, OfficialFactSheet } from '@/lib/agents/factExtractor';
 import { analyzeDiscrepancies } from '@/lib/agents/analyzer';
 import { tables, createDiscrepancyNote, findSimilarDiscrepancy } from '@/lib/airtable';
 
@@ -13,8 +14,9 @@ export async function POST(request: Request) {
 
     const clientUrl = pageRecord.get('Web Page URL') as string;
     const clientName = pageRecord.get('Client Name') as string;
+    const centreIds = pageRecord.get('Centres') as string[];
     
-    // Get Reference Page URL (Lookup field returns array)
+    // Get Reference Page URL
     const refPageValue = pageRecord.get('Reference Page (from Centres)');
     let officialUrl = '';
     
@@ -28,74 +30,90 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Reference Page URL missing in Airtable record.' }, { status: 400 });
     }
 
-    // 2. Double Scrape (Parallel)
-    console.log(`🔍 Scanning: ${clientName}`);
-    console.log(`   Client URL: ${clientUrl}`);
-    console.log(`   Official URL: ${officialUrl}`);
+    // --- STEP 2: LOAD OR EXTRACTION OFFICIAL FACTS ---
+    let officialFacts: OfficialFactSheet | null = null;
+    let centreRecord = null;
 
-    const [clientScraped, officialScraped] = await Promise.all([
-      scrapeWebPage(clientUrl),
-      scrapeWebPage(officialUrl)
-    ]);
+    if (centreIds && centreIds.length > 0) {
+      try {
+        centreRecord = await tables.products.find(centreIds[0]);
+        const cachedData = centreRecord.get('Official Data Cache') as string;
+        if (cachedData) {
+          try {
+            officialFacts = JSON.parse(cachedData);
+            console.log(`📦 Using cached facts for centre: ${centreRecord.get('Product or Service Name')}`);
+          } catch (e) {
+            console.warn('Failed to parse cached data, re-extracting...');
+          }
+        }
+      } catch (e) {
+        console.warn('Could not find or read centre record for caching');
+      }
+    }
+
+    // 3. Scrape and Extract if not cached
+    const clientScraped = await scrapeWebPage(clientUrl);
     
-    // 3. Analyze with Comparison Agent
-    console.log('🤖 Running AI comparison...');
+    if (!officialFacts) {
+      console.log(`🌐 Scraping official page for facts: ${officialUrl}`);
+      const officialScraped = await scrapeWebPage(officialUrl);
+      officialFacts = await extractOfficialFacts(officialScraped.text, officialUrl);
+      
+      // Save to cache if possible
+      if (centreRecord && officialFacts) {
+        try {
+          await tables.products.update(centreRecord.id, {
+            'Official Data Cache': JSON.stringify(officialFacts)
+          });
+          console.log('✅ Official facts saved to Airtable cache.');
+        } catch (e) {
+          console.warn('Could not save to Airtable cache (Field "Official Data Cache" might be missing).');
+        }
+      }
+    }
+
+    // 4. Analyze with Comparison Agent
+    console.log('🤖 Running AI comparison against official fact sheet...');
     const analysis = await analyzeDiscrepancies(
       clientUrl,
       clientScraped.text,
       officialUrl,
-      officialScraped.text
+      officialFacts
     );
     
     console.log(`📊 Analysis complete: ${analysis.discrepancies.length} discrepancies found`);
     
-    // 4. Create individual Discrepancy Notes (with duplicate prevention)
+    // 5. Create individual Discrepancy Notes (with duplicate prevention)
     let createdCount = 0;
     let skippedCount = 0;
     
     if (analysis.discrepancies && Array.isArray(analysis.discrepancies)) {
       for (const discrepancy of analysis.discrepancies) {
-        // Check for duplicates
-        const isDuplicate = await findSimilarDiscrepancy(
-          pageId,
-          discrepancy.description
-        );
+        const isDuplicate = await findSimilarDiscrepancy(pageId, discrepancy.description);
         
         if (isDuplicate) {
-          console.log(`⏭️  Skipping duplicate: "${discrepancy.name}"`);
           skippedCount++;
           continue;
         }
         
-        // Create new discrepancy note
         try {
           await createDiscrepancyNote({
             name: discrepancy.name,
             description: discrepancy.description,
             pageId: pageId
           });
-          
           createdCount++;
-          console.log(`✅ Created: "${discrepancy.name}" (${discrepancy.severity})`);
         } catch (err) {
           console.error(`❌ Failed to create discrepancy: ${discrepancy.name}`, err);
         }
       }
     }
     
-    // 5. Update page record
-    const dateOnly = clientScraped.timestamp.split('T')[0];
-    
-    // Note: '# Discrepancies' is a computed field in Airtable (Count), so we don't need to update it manually.
-    // It will automatically reflect the number of linked records.
-
+    // 6. Update page record
+    const dateOnly = new Date().toISOString().split('T')[0];
     await tables.pages.update(pageId, {
       'Last Checked Date': dateOnly
     });
-
-    console.log(`\n📝 Summary:`);
-    console.log(`   Created: ${createdCount} new discrepancies`);
-    console.log(`   Skipped: ${skippedCount} duplicates`);
 
     return NextResponse.json({ 
       success: true, 
@@ -109,3 +127,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
