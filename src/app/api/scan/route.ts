@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     // --- STEP 3: FETCH PREVIOUS RESOLUTIONS (MEMORY) ---
     const previousDiscrepancies = await tables.discrepancies.select({
-      filterByFormula: `AND({Client Web Page} = '${pageId}', OR({Resolved} = 1, NOT({Resolution Notes} = '')))`
+      filterByFormula: `AND({Client Web Page} = '${pageId}', NOT({Resolution Notes} = ''))`
     }).all();
     
     const previousResolutions = previousDiscrepancies
